@@ -3,20 +3,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace WebApp_Core_Identity.Model
 {
-    public class AuthDbContext : IdentityDbContext<ApplicationUse>
+    public class AuthDbContext : IdentityDbContext<ApplicationUser>
     {
-
-        private readonly IConfiguration _configuration;
-        //public AuthDbContext(DbContextOptions<AuthDbContext> options):base(options){ }
-
-        public AuthDbContext(IConfiguration configuration)
+        public AuthDbContext(DbContextOptions<AuthDbContext> options) : base(options)
         {
-            _configuration = configuration;
         }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        public DbSet<AuditLog> AuditLogs { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder builder)
         {
-            string connectionString = _configuration.GetConnectionString("AuthConnectionString"); optionsBuilder.UseSqlServer(connectionString);
+            base.OnModelCreating(builder);
+
+            // If you enable RequireUniqueEmail = true in IdentityOptions,
+            // enforce a unique index at the DB level on NormalizedEmail.
+            builder.Entity<ApplicationUser>()
+                .HasIndex(u => u.NormalizedEmail)
+                .IsUnique();
+
+            builder.Entity<AuditLog>()
+                .HasIndex(a => a.CreatedAt);
         }
     }
 }

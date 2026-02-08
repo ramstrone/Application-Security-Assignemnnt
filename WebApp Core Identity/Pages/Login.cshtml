@@ -1,38 +1,41 @@
 ﻿@page
 @model WebApp_Core_Identity.Pages.LoginModel
 @{
+ ViewData["Title"] = "Login";
 }
-<div class="container mt-5">
 
-	<div class="row justify-content-center align-items-center">
+<h2>Login</h2>
 
-		<div class="col-sm-12 col-md-12 col-lg-4">
-			<h1 class="mb-3">Login </h1>
+<form method="post" id="loginForm">
+ <div class="mb-3">
+ <label asp-for="LModel.Email" class="form-label"></label>
+ <input asp-for="LModel.Email" class="form-control" />
+ <span asp-validation-for="LModel.Email" class="text-danger"></span>
+ </div>
+ <div class="mb-3">
+ <label asp-for="LModel.Password" class="form-label"></label>
+ <input asp-for="LModel.Password" class="form-control" type="password" />
+ <span asp-validation-for="LModel.Password" class="text-danger"></span>
+ </div>
+ <div class="mb-3 form-check">
+ <input asp-for="LModel.RememberMe" class="form-check-input" />
+ <label asp-for="LModel.RememberMe" class="form-check-label"></label>
+ </div>
+ <input type="hidden" id="g-recaptcha-response" name="gRecaptchaToken" />
+ <button type="submit" class="btn btn-primary">Login</button>
+</form>
 
-			<form method="post">
-				
-				<div class="mb-3">
-					<label class="form-label" asp-for="LModel.Email">Email Address</label>
-					<input type="Text" asp-for="LModel.Email" class="form-control" />
-					<span asp-validaton-for="LModel.Email" class="text-danger"></span>
-				</div>
-
-				<div class="mb-3">
-					<label class="form-label" asp-for="LModel.Password">Password</label>
-					<input type="Text" asp-for="LModel.Password" class="form-control" />
-					<span asp-validaton-for="LModel.Password" class="text-danger"></span>
-				</div>
-
-				<div class="mb-3 form-check">
-					<input type="checkbox" asp-for="LModel.RememberMe" class="form-check-input" />
-					<label class="form-check-label" asp-for="LModel.RememberMe">Remember Me?</label>
-				</div>
-
-				<div class="mb-3">
-					<button type="submit" class="btn btn-primary">Login</button>
-				</div>
-			</form>
-		</div>
-	</div>
-</div>
+@section Scripts {
+ @if (!string.IsNullOrEmpty(Model.RecaptchaSiteKey))
+ {
+ <script src="https://www.google.com/recaptcha/api.js?render=@Model.RecaptchaSiteKey"></script>
+ <script>
+ grecaptcha.ready(function () {
+ grecaptcha.execute('@Model.RecaptchaSiteKey', { action: 'login' }).then(function (token) {
+ document.getElementById('g-recaptcha-response').value = token;
+ });
+ });
+ </script>
+ }
+}
 

@@ -1,0 +1,38 @@
+@page
+@model WebApp_Core_Identity.Pages.AuditLogsModel
+@{
+ ViewData["Title"] = "Audit Logs";
+}
+
+<h2>Audit Logs</h2>
+
+@if (Model.Logs?.Any() != true)
+{
+ <p>No audit entries.</p>
+}
+else
+{
+ <table class="table table-sm">
+ <thead>
+ <tr>
+ <th>Time (UTC)</th>
+ <th>User</th>
+ <th>Event</th>
+ <th>Description</th>
+ <th>IP</th>
+ </tr>
+ </thead>
+ <tbody>
+ @foreach (var a in Model.Logs)
+ {
+ <tr>
+ <td>@a.CreatedAt.ToString("u")</td>
+ <td>@a.UserId</td>
+ <td>@a.EventType</td>
+ <td>@a.Description</td>
+ <td>@a.IpAddress</td>
+ </tr>
+ }
+ </tbody>
+ </table>
+}
