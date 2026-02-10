@@ -6,40 +6,47 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace WebApp_Core_Identity.Migrations
 {
     /// <inheritdoc />
-    public partial class NewThings : Migration
+    public partial class PasswordHistory : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<DateTime>(
+                name: "PasswordChangedUtc",
+                table: "AspNetUsers",
+                type: "datetime2",
+                nullable: true);
+
             migrationBuilder.CreateTable(
-                name: "AuditLogs",
+                name: "PasswordHistories",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
-                    EventType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    IpAddress = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    UserAgent = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    PasswordHash = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_AuditLogs", x => x.Id);
+                    table.PrimaryKey("PK_PasswordHistories", x => x.Id);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_AuditLogs_CreatedAt",
-                table: "AuditLogs",
-                column: "CreatedAt");
+                name: "IX_PasswordHistories_UserId_CreatedAtUtc",
+                table: "PasswordHistories",
+                columns: new[] { "UserId", "CreatedAtUtc" });
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "AuditLogs");
+                name: "PasswordHistories");
+
+            migrationBuilder.DropColumn(
+                name: "PasswordChangedUtc",
+                table: "AspNetUsers");
         }
     }
 }

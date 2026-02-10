@@ -22,13 +22,13 @@ namespace WebApp_Core_Identity.Pages
             this.creditCardProtector = creditCardProtector;
         }
 
-        public string Email { get; set; }
-        public string FullName { get; set; }
-        public string MobileNumber { get; set; }
-        public string BillingAddress { get; set; }
-        public string ShippingAddress { get; set; }
-        public string MaskedCreditCard { get; set; }
-        public string PhotoUrl { get; set; }
+        public string? Email { get; set; }
+        public string? FullName { get; set; }
+        public string? MobileNumber { get; set; }
+        public string? BillingAddress { get; set; }
+        public string? ShippingAddress { get; set; }
+        public string? MaskedCreditCard { get; set; }
+        public string? PhotoUrl { get; set; }
 
         public async Task<IActionResult> OnGetAsync()
         {

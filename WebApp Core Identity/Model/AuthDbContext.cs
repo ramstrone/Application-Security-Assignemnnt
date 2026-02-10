@@ -10,6 +10,7 @@ namespace WebApp_Core_Identity.Model
         }
 
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<PasswordHistory> PasswordHistories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -23,6 +24,9 @@ namespace WebApp_Core_Identity.Model
 
             builder.Entity<AuditLog>()
                 .HasIndex(a => a.CreatedAt);
+
+            builder.Entity<PasswordHistory>()
+                .HasIndex(p => new { p.UserId, p.CreatedAtUtc });
         }
     }
 }

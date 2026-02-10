@@ -10,6 +10,13 @@
  @Html.AntiForgeryToken()
  <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
+ @if (ViewData["MustChangePassword"] != null)
+ {
+ <div class="alert alert-warning">Your password has expired — please sign in and change your password.</div>
+ }
+
+ <input type="hidden" name="MustChangePassword" value="@(Model.MustChangePassword ?? "")" />
+
  <div class="mb-3">
  <label asp-for="LModel.Email" class="form-label"></label>
  <input asp-for="LModel.Email" class="form-control" autocomplete="email" />
@@ -27,6 +34,10 @@
  <input type="hidden" id="g-recaptcha-response" name="gRecaptchaToken" />
 
  <button type="submit" class="btn btn-primary">Login</button>
+
+ <div class="mt-3">
+ <a asp-page="/Account/ForgotPassword">Forgot your password?</a>
+ </div>
 </form>
 
 @section Scripts {

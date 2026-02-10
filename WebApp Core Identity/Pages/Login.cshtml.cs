@@ -20,7 +20,10 @@ namespace WebApp_Core_Identity.Pages
         [BindProperty]
         public string? gRecaptchaToken { get; set; }
 
-        public string RecaptchaSiteKey { get; private set; }
+        [BindProperty]
+        public string? MustChangePassword { get; set; }
+
+        public string? RecaptchaSiteKey { get; private set; }
 
         private readonly SignInManager<ApplicationUser> signInManager;
         private readonly UserManager<ApplicationUser> userManager;
@@ -42,6 +45,12 @@ namespace WebApp_Core_Identity.Pages
                 ViewData["SessionMessage"] = "Your session has expired. Please log in again.";
             if (Request.Query.ContainsKey("otherLogin"))
                 ViewData["SessionMessage"] = "Your session was ended because your account was signed in on another device.";
+
+            if (Request.Query.ContainsKey("mustChangePassword"))
+            {
+                MustChangePassword = Request.Query["mustChangePassword"];
+                ViewData["MustChangePassword"] = true;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
@@ -93,6 +102,12 @@ namespace WebApp_Core_Identity.Pages
 
                     // sign in using Identity application scheme
                     await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal, authProperties);
+
+                    // If password expired flow was requested, redirect to ChangePassword after successful sign-in
+                    if (!string.IsNullOrEmpty(MustChangePassword))
+                    {
+                        return RedirectToPage("/Account/ChangePassword", new { expired =1 });
+                    }
 
                     return RedirectToPage("Index");
                 }

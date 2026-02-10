@@ -8,6 +8,8 @@ using System.IO;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using WebApp_Core_Identity.Services;
+using System;
+using System.Threading.Tasks;
 
 namespace WebApp_Core_Identity.Pages
 {
@@ -163,6 +165,23 @@ namespace WebApp_Core_Identity.Pages
             {
                 await userManager.AddToRoleAsync(user, "Admin");
                 await signInManager.SignInAsync(user, isPersistent: false);
+
+                // Re-fetch the user to ensure PasswordHash is populated from store
+                var createdUser = await userManager.FindByEmailAsync(email);
+                var hash = createdUser?.PasswordHash;
+                if (!string.IsNullOrEmpty(hash))
+                {
+                    var ph = HttpContext.RequestServices.GetRequiredService<IPasswordHistoryService>();
+                    await ph.AddAsync(createdUser.Id, hash);
+                    await ph.TrimAsync(createdUser.Id,2); // keep last2
+                }
+
+                if (createdUser != null)
+                {
+                    createdUser.PasswordChangedUtc = DateTime.UtcNow;
+                    await userManager.UpdateAsync(createdUser);
+                }
+
                 return RedirectToPage("Index");
             }
 

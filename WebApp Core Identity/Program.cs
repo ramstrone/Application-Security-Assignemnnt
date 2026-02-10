@@ -85,6 +85,27 @@ builder.Services.ConfigureApplicationCookie(options =>
  return;
  }
 
+ // Enforce maximum password age: require change if expired
+ var config = ctx.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+ var maxAgeMinutes = config.GetValue<int>("PasswordPolicy:MaxAgeMinutes",300);
+ if (!string.IsNullOrEmpty(user.Id))
+ {
+ if (!user.PasswordChangedUtc.HasValue || DateTime.UtcNow - user.PasswordChangedUtc.Value > TimeSpan.FromMinutes(maxAgeMinutes))
+ {
+ // Force password change: sign out and redirect to login so user can re-authenticate and then change password
+ await ctx.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+ logger.LogInformation("Password expired for user {userId}; signing out and redirecting to Login (mustChangePassword flag).", user.Id);
+
+ if (!ctx.HttpContext.Request.Path.StartsWithSegments("/Account/ChangePassword", StringComparison.OrdinalIgnoreCase))
+ {
+ ctx.HttpContext.Response.Redirect("/Login?mustChangePassword=1");
+ }
+
+ ctx.RejectPrincipal();
+ return;
+ }
+ }
+
  var sessionId = ctx.Principal.FindFirst("SessionId")?.Value ?? string.Empty;
  var result = sessionTracker.ValidateSession(user.Id, sessionId, out var remaining);
  if (result == SessionValidationResult.Expired)
@@ -176,6 +197,9 @@ builder.Services.AddSingleton<ISessionTracker, InMemorySessionTracker>();
 
 // Add this line:
 builder.Services.AddRazorPages();
+builder.Services.AddScoped<IPasswordHistoryService, PasswordHistoryService>();
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
+builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
 
 var app = builder.Build();
 

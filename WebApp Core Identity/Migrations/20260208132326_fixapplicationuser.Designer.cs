@@ -13,7 +13,7 @@ namespace WebApp_Core_Identity.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
     [Migration("20260208132326_fixapplicationuser")]
-    partial class fixapplicationuser
+    partial class FixApplicationuser
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -13,7 +13,7 @@ namespace WebApp_Core_Identity.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
     [Migration("20260208164345_newthings")]
-    partial class newthings
+    partial class NewThings
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
