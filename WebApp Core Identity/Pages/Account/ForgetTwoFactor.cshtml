@@ -1,0 +1,13 @@
+@page
+@model WebApp_Core_Identity.Pages.Account.ForgetTwoFactorModel
+@{
+ ViewData["Title"] = "Forget two-factor device";
+}
+
+<h2>Forget two-factor device</h2>
+
+<form method="post">
+ @Html.AntiForgeryToken()
+ <p>This will remove the remember-me for two-factor authentication on this device.</p>
+ <button type="submit" class="btn btn-danger">Forget this device</button>
+</form>

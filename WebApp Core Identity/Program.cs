@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
@@ -18,6 +19,9 @@ builder.Services.AddScoped<IAuditService, DbAuditService>();
 // Register Recaptcha service
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IRecaptchaService, GoogleRecaptchaService>();
+
+// Register email sender (development logger)
+builder.Services.AddTransient<IEmailSender, LogEmailSender>();
 
 // Configure Identity options (unique email, password policy, lockout)
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -67,6 +71,11 @@ builder.Services.ConfigureApplicationCookie(options =>
  if (user != null)
  {
  var sessionId = ctx.Principal.FindFirst("SessionId")?.Value ?? Guid.NewGuid().ToString();
+ // Ensure the principal contains the session id claim so OnValidatePrincipal can read it later
+ if (ctx.Principal.Identity is ClaimsIdentity ci && ci.FindFirst("SessionId") == null)
+ {
+ ci.AddClaim(new Claim("SessionId", sessionId));
+ }
  sessionTracker.CreateSession(user.Id, sessionId, ctx.Options.ExpireTimeSpan);
  }
  };

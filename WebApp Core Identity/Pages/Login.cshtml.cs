@@ -8,6 +8,7 @@ using WebApp_Core_Identity.Model;
 using Microsoft.AspNetCore.Authorization;
 using WebApp_Core_Identity.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace WebApp_Core_Identity.Pages
 {
@@ -29,13 +30,15 @@ namespace WebApp_Core_Identity.Pages
         private readonly UserManager<ApplicationUser> userManager;
         private readonly IConfiguration configuration;
         private readonly IRecaptchaService recaptchaService;
+        private readonly ILogger<LoginModel> logger;
 
-        public LoginModel(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, IConfiguration configuration, IRecaptchaService recaptchaService)
+        public LoginModel(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, IConfiguration configuration, IRecaptchaService recaptchaService, ILogger<LoginModel> logger)
         {
             this.signInManager = signInManager;
             this.userManager = userManager;
             this.configuration = configuration;
             this.recaptchaService = recaptchaService;
+            this.logger = logger;
         }
         public void OnGet()
         {
@@ -75,54 +78,20 @@ namespace WebApp_Core_Identity.Pages
                     return Page();
                 }
 
-                // Enable lockout counting on failed attempts
-                var check = await signInManager.CheckPasswordSignInAsync(user, LModel.Password, lockoutOnFailure: true);
-                if (check.Succeeded)
+                var result = await signInManager.PasswordSignInAsync(LModel.Email, LModel.Password, LModel.RememberMe, lockoutOnFailure: true);
+
+                if (result.Succeeded)
                 {
-                    // create a session id and register it with the session tracker
-                    var sessionTracker = HttpContext.RequestServices.GetRequiredService<ISessionTracker>();
-                    var sessionId = Guid.NewGuid().ToString();
-                    var timeoutMinutes = configuration.GetValue<int>("Session:TimeoutMinutes",20);
-                    var sessionTimeout = TimeSpan.FromMinutes(timeoutMinutes); // keep in sync with cookie expiration
-                    sessionTracker.CreateSession(user.Id, sessionId, sessionTimeout);
-
-                    // create principal and add session id claim
-                    var principal = await signInManager.CreateUserPrincipalAsync(user);
-                    if (principal.Identity is ClaimsIdentity ci)
-                    {
-                        ci.AddClaim(new Claim("SessionId", sessionId));
-                    }
-
-                    var authProperties = new AuthenticationProperties
-                    {
-                        IsPersistent = LModel.RememberMe,
-                        ExpiresUtc = DateTimeOffset.UtcNow.Add(sessionTimeout),
-                        AllowRefresh = true
-                    };
-
-                    // sign in using Identity application scheme
-                    await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal, authProperties);
-
-                    // If password expired flow was requested, redirect to ChangePassword after successful sign-in
-                    if (!string.IsNullOrEmpty(MustChangePassword))
-                    {
-                        return RedirectToPage("/Account/ChangePassword", new { expired =1 });
-                    }
-
+                    // signed in, create session tracker etc (optional: use CreateUserPrincipalAsync and sign in if you need custom claims)
                     return RedirectToPage("Index");
                 }
-
-                if (check.IsLockedOut)
+                if (result.RequiresTwoFactor)
+                {
+                    return RedirectToPage("/Account/LoginWith2fa", new { rememberMe = LModel.RememberMe });
+                }
+                if (result.IsLockedOut)
                 {
                     ModelState.AddModelError("", "Account locked due to multiple failed login attempts. Please try again later.");
-                }
-                else if (check.IsNotAllowed)
-                {
-                    ModelState.AddModelError("", "Login is not allowed for this account. Please confirm your email or contact support.");
-                }
-                else if (check.RequiresTwoFactor)
-                {
-                    ModelState.AddModelError("", "Two-factor authentication is required for this account.");
                 }
                 else
                 {

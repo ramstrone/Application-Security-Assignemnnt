@@ -1,0 +1,18 @@
+﻿@page
+@model WebApp_Core_Identity.Pages.Account.ShowRecoveryCodesModel
+@{
+    ViewData["Title"] = "Recovery codes";
+}
+
+<h2>Your recovery codes</h2>
+
+<p>Save these recovery codes in a safe place. Each code can be used once if you lose access to your authenticator app.</p>
+
+<ul class="list-group mb-3">
+    @foreach (var code in Model.Codes)
+    {
+        <li class="list-group-item">@code</li>
+    }
+</ul>
+
+<a class="btn btn-primary" asp-page="/Index">Back to home</a>
