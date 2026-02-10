@@ -67,9 +67,9 @@ namespace WebApp_Core_Identity.Services
             }
             catch (Exception ex)
             {
-                // Log error and the body so you can copy the reset link in dev
+                // Log error; avoid logging the full email body to prevent leaking sensitive data (such as reset tokens).
                 _logger.LogError(ex, "Failed to send SMTP email to {to}", to);
-                _logger.LogInformation("Email body (dev fallback): {html}", html);
+                _logger.LogInformation("Email body is omitted from logs to protect sensitive data.");
                 // Do not rethrow in production flow; caller can decide behavior.
             }
         }
