@@ -84,6 +84,10 @@ namespace WebApp_Core_Identity.Pages
                 return Page();
             }
 
+            // Sanitize free-text inputs (addresses) before saving
+            RModel.BillingAddress = InputSanitizer.Sanitize(RModel.BillingAddress);
+            RModel.ShippingAddress = InputSanitizer.Sanitize(RModel.ShippingAddress);
+
             var email = (RModel.Email ?? string.Empty).Trim();
 
             // Check for duplicate email before attempting to create user

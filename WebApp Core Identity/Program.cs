@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -60,7 +61,9 @@ builder.Services.ConfigureApplicationCookie(options =>
  {
  var sessionTracker = ctx.HttpContext.RequestServices.GetRequiredService<ISessionTracker>();
  var userManager = ctx.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
+ var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
  var user = await userManager.GetUserAsync(ctx.Principal);
+ logger.LogInformation("OnSigningIn for user principal: {name}", ctx.Principal?.Identity?.Name);
  if (user != null)
  {
  var sessionId = ctx.Principal.FindFirst("SessionId")?.Value ?? Guid.NewGuid().ToString();
@@ -72,9 +75,12 @@ builder.Services.ConfigureApplicationCookie(options =>
  {
  var sessionTracker = ctx.HttpContext.RequestServices.GetRequiredService<ISessionTracker>();
  var userManager = ctx.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
+ var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
  var user = await userManager.GetUserAsync(ctx.Principal);
+ logger.LogInformation("OnValidatePrincipal invoked. RequestPath={path}, UserIdentity={name}", ctx.HttpContext.Request.Path, ctx.Principal?.Identity?.Name);
  if (user == null)
  {
+ logger.LogInformation("User not found during validation, rejecting principal.");
  ctx.RejectPrincipal();
  return;
  }
@@ -87,7 +93,15 @@ builder.Services.ConfigureApplicationCookie(options =>
  var audit = ctx.HttpContext.RequestServices.GetRequiredService<IAuditService>();
  await audit.LogEventAsync(user.Id, "SessionExpired", "User session expired", ctx.HttpContext);
 
+ // Sign out the application cookie to clear it and avoid redirect loops
+ await ctx.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+ logger.LogInformation("Session expired for user {userId}; signing out and redirecting to Login.", user.Id);
+
+ // Only redirect if we're not already on the login page
+ if (!ctx.HttpContext.Request.Path.Equals("/Login", StringComparison.OrdinalIgnoreCase))
+ {
  ctx.HttpContext.Response.Redirect("/Login?sessionExpired=1");
+ }
  ctx.RejectPrincipal();
  return;
  }
@@ -97,7 +111,14 @@ builder.Services.ConfigureApplicationCookie(options =>
  var audit = ctx.HttpContext.RequestServices.GetRequiredService<IAuditService>();
  await audit.LogEventAsync(user.Id, "SessionReplaced", "User session replaced by another login", ctx.HttpContext);
 
+ // Sign out to clear cookie and avoid loops
+ await ctx.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+ logger.LogInformation("Session replaced for user {userId}; signing out and redirecting to Login.", user.Id);
+
+ if (!ctx.HttpContext.Request.Path.Equals("/Login", StringComparison.OrdinalIgnoreCase))
+ {
  ctx.HttpContext.Response.Redirect("/Login?otherLogin=1");
+ }
  ctx.RejectPrincipal();
  return;
  }
@@ -107,6 +128,16 @@ builder.Services.ConfigureApplicationCookie(options =>
  // Customize redirect to login to mark sessionExpired when cookie existed
  options.Events.OnRedirectToLogin = ctx =>
  {
+ var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+ logger.LogInformation("OnRedirectToLogin invoked. RequestPath={path}", ctx.Request.Path);
+
+ // If the request is for the login page already, do not redirect again
+ if (ctx.Request.Path.Equals("/Login", StringComparison.OrdinalIgnoreCase))
+ {
+ logger.LogInformation("Already on /Login, skipping redirect.");
+ return Task.CompletedTask;
+ }
+
  if (ctx.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
  {
  ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -117,7 +148,8 @@ builder.Services.ConfigureApplicationCookie(options =>
  var hasAuthCookie = ctx.Request.Cookies.ContainsKey(cookieName);
 
  var redirectUri = ctx.RedirectUri;
- if (hasAuthCookie)
+ // avoid appending the same flag multiple times
+ if (hasAuthCookie && !redirectUri.Contains("sessionExpired=true") && !redirectUri.Contains("otherLogin=1"))
  {
  var separator = redirectUri.Contains('?') ? '&' : '?';
  redirectUri = redirectUri + separator + "sessionExpired=true";
@@ -142,7 +174,23 @@ builder.Services.AddSingleton<ICreditCardProtector, CreditCardProtector>();
 // Register session tracker (in-memory)
 builder.Services.AddSingleton<ISessionTracker, InMemorySessionTracker>();
 
+// Add this line:
+builder.Services.AddRazorPages();
+
 var app = builder.Build();
+
+// Diagnostic middleware to log each request and response to help find redirect loops
+app.Use(async (ctx, next) =>
+{
+ var logger = ctx.RequestServices.GetRequiredService<ILogger<Program>>();
+ var hasCookie = ctx.Request.Cookies.ContainsKey(".AspNetCore.Identity.Application");
+ logger.LogInformation("Incoming request {method} {path} Authenticated={auth} HasCookie={hasCookie}", ctx.Request.Method, ctx.Request.Path, ctx.User?.Identity?.IsAuthenticated, hasCookie);
+
+ await next();
+
+ var location = ctx.Response.Headers.ContainsKey("Location") ? ctx.Response.Headers["Location"].ToString() : string.Empty;
+ logger.LogInformation("Outgoing response {status} Location={location}", ctx.Response.StatusCode, location);
+});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -151,12 +199,15 @@ if (!app.Environment.IsDevelopment())
  app.UseHsts();
 }
 
-app.UseAuthentication();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
 
+// Add status code pages to re-execute to our error handler for404/403/etc
+app.UseStatusCodePagesWithReExecute("/Error/{0}");
+
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();

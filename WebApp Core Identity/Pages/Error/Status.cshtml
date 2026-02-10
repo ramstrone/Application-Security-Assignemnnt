@@ -1,0 +1,21 @@
+@page "{statusCode:int}"
+@model WebApp_Core_Identity.Pages.Error.StatusModel
+@{
+ ViewData["Title"] = $"Error {Model.StatusCode}";
+}
+
+<div class="container py-5">
+ <div class="card border-danger">
+ <div class="card-body">
+ <h1 class="card-title text-danger">Error @Model.StatusCode</h1>
+ <p class="card-text">@Model.Message</p>
+
+ @if (!string.IsNullOrEmpty(Model.RequestPath))
+ {
+ <p class="text-muted"><strong>Path:</strong> @Model.RequestPath</p>
+ }
+
+ <a class="btn btn-primary" asp-page="/Index">Return to Home</a>
+ </div>
+ </div>
+</div>

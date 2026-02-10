@@ -18,7 +18,7 @@ namespace WebApp_Core_Identity.Pages
         public Login LModel { get; set; }
 
         [BindProperty]
-        public string gRecaptchaToken { get; set; }
+        public string? gRecaptchaToken { get; set; }
 
         public string RecaptchaSiteKey { get; private set; }
 

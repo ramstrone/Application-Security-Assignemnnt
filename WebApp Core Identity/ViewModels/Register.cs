@@ -6,6 +6,7 @@ namespace WebApp_Core_Identity.ViewModels
     public class Register
     {
         [Required]
+        [EmailAddress]
         [DataType(DataType.EmailAddress)]
         public string Email { get; set; }
 
@@ -29,6 +30,7 @@ namespace WebApp_Core_Identity.ViewModels
 
         [Required]
         [Phone]
+        [RegularExpression(@"^\+?[0-9 \-\(\)]{7,20}$", ErrorMessage = "Invalid phone number")]
         [MaxLength(20)]
         public string MobileNumber { get; set; }
 
@@ -45,6 +47,7 @@ namespace WebApp_Core_Identity.ViewModels
         // Sensitive: store encrypted value in DB. Keep as string here and encrypt server-side before saving.
         [Required]
         [DataType(DataType.CreditCard)]
+        [StringLength(25, MinimumLength =12, ErrorMessage = "Credit card length invalid")]
         public string CreditCard { get; set; }
 
         // Photo upload (.jpg only) - will be handled in the page handler. Optional now.

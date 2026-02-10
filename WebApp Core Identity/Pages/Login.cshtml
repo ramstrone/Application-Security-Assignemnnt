@@ -7,14 +7,17 @@
 <h2>Login</h2>
 
 <form method="post" id="loginForm">
+ @Html.AntiForgeryToken()
+ <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
  <div class="mb-3">
  <label asp-for="LModel.Email" class="form-label"></label>
- <input asp-for="LModel.Email" class="form-control" />
+ <input asp-for="LModel.Email" class="form-control" autocomplete="email" />
  <span asp-validation-for="LModel.Email" class="text-danger"></span>
  </div>
  <div class="mb-3">
  <label asp-for="LModel.Password" class="form-label"></label>
- <input asp-for="LModel.Password" class="form-control" type="password" />
+ <input asp-for="LModel.Password" class="form-control" type="password" autocomplete="current-password" />
  <span asp-validation-for="LModel.Password" class="text-danger"></span>
  </div>
  <div class="mb-3 form-check">
@@ -22,6 +25,7 @@
  <label asp-for="LModel.RememberMe" class="form-check-label"></label>
  </div>
  <input type="hidden" id="g-recaptcha-response" name="gRecaptchaToken" />
+
  <button type="submit" class="btn btn-primary">Login</button>
 </form>
 
@@ -30,11 +34,68 @@
  {
  <script src="https://www.google.com/recaptcha/api.js?render=@Model.RecaptchaSiteKey"></script>
  <script>
- grecaptcha.ready(function () {
- grecaptcha.execute('@Model.RecaptchaSiteKey', { action: 'login' }).then(function (token) {
- document.getElementById('g-recaptcha-response').value = token;
+ (function () {
+ const siteKey = '@Model.RecaptchaSiteKey';
+ const form = document.getElementById('loginForm');
+ const tokenInput = document.getElementById('g-recaptcha-response');
+ const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+ let inFlight = false;
+
+ async function requestTokenAndSubmit() {
+ // guard: don't request twice
+ if (inFlight) return;
+ inFlight = true;
+ if (submitBtn) submitBtn.disabled = true;
+
+ // Fallback submit if grecaptcha never becomes ready
+ const fallback = setTimeout(() => {
+ if (inFlight) {
+ inFlight = false;
+ if (submitBtn) submitBtn.disabled = false;
+ form.submit();
+ }
+ }, 5000);
+
+ try {
+ if (typeof grecaptcha === 'undefined') {
+ // library not present (blocked) -> submit and let server handle
+ clearTimeout(fallback);
+ inFlight = false;
+ if (submitBtn) submitBtn.disabled = false;
+ form.submit();
+ return;
+ }
+
+ // wait until grecaptcha is initialized
+ grecaptcha.ready(async function () {
+ try {
+ const token = await grecaptcha.execute(siteKey, { action: 'login' });
+ if (tokenInput) tokenInput.value = token || '';
+ } catch (e) {
+ console.warn('grecaptcha.execute failed', e);
+ } finally {
+ clearTimeout(fallback);
+ inFlight = false;
+ if (submitBtn) submitBtn.disabled = false;
+ form.submit();
+ }
  });
+ } catch (e) {
+ console.error('reCAPTCHA flow error', e);
+ clearTimeout(fallback);
+ inFlight = false;
+ if (submitBtn) submitBtn.disabled = false;
+ form.submit();
+ }
+ }
+
+ if (form) {
+ form.addEventListener('submit', function (evt) {
+ evt.preventDefault();
+ requestTokenAndSubmit();
  });
+ }
+ })();
  </script>
  }
 }
