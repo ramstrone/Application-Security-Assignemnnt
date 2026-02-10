@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
 
 namespace WebApp_Core_Identity.Pages.Error
 {
@@ -29,7 +30,31 @@ namespace WebApp_Core_Identity.Pages.Error
                 _ => "An error occurred while processing your request."
             };
 
-            logger.LogWarning("Status {status} returned for {path}", statusCode, RequestPath);
+            // Sanitize user-controlled values before logging to avoid log injection (CRLF/control chars)
+            var safePath = SanitizeForLogging(RequestPath);
+
+            // Use structured logging (no string concatenation) and the sanitized value
+            logger.LogWarning("Status {status} returned for {path}", statusCode, safePath);
+        }
+
+        private static string SanitizeForLogging(string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return string.Empty;
+
+            var sb = new StringBuilder(value.Length);
+            foreach (var ch in value)
+            {
+                if (ch == '\r')
+                    sb.Append("\\r");
+                else if (ch == '\n')
+                    sb.Append("\\n");
+                else if (char.IsControl(ch))
+                    sb.Append('?'); // replace other control characters
+                else
+                    sb.Append(ch);
+            }
+            return sb.ToString();
         }
     }
 }
