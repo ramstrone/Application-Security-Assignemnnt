@@ -9,7 +9,7 @@ namespace WebApp_Core_Identity.Services
  public LogEmailSender(ILogger<LogEmailSender> logger) => this.logger = logger;
  public Task SendEmailAsync(string to, string subject, string html)
  {
- logger.LogInformation("Email to {to} subject {subject}: {body}", to, subject, html);
+ logger.LogInformation("Email to {to} subject {subject}: body omitted for security reasons", to, subject);
  return Task.CompletedTask;
  }
  }
