@@ -37,7 +37,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
  options.Password.RequireNonAlphanumeric = true;
 
  // Lockout policy
- options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+ options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(1);
  options.Lockout.MaxFailedAccessAttempts =3;
  options.Lockout.AllowedForNewUsers = true;
 
@@ -47,7 +47,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<AuthDbContext>()
 .AddDefaultTokenProviders();
 
-var timeoutMinutes = builder.Configuration.GetValue<int>("Session:TimeoutMinutes",20);
+var timeoutMinutes = builder.Configuration.GetValue<int>("Session:TimeoutMinutes",1);
 var sessionTimeout = TimeSpan.FromMinutes(timeoutMinutes);
 
 // Consolidated cookie configuration for Identity application cookie
@@ -96,22 +96,21 @@ builder.Services.ConfigureApplicationCookie(options =>
 
  // Enforce maximum password age: require change if expired
  var config = ctx.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
- var maxAgeMinutes = config.GetValue<int>("PasswordPolicy:MaxAgeMinutes",300);
+ var maxAgeMinutes = config.GetValue<int>("PasswordPolicy:MaxAgeMinutes",1);
  if (!string.IsNullOrEmpty(user.Id))
  {
  if (!user.PasswordChangedUtc.HasValue || DateTime.UtcNow - user.PasswordChangedUtc.Value > TimeSpan.FromMinutes(maxAgeMinutes))
  {
- // Force password change: sign out and redirect to login so user can re-authenticate and then change password
- await ctx.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
- logger.LogInformation("Password expired for user {userId}; signing out and redirecting to Login (mustChangePassword flag).", user.Id);
-
- if (!ctx.HttpContext.Request.Path.StartsWithSegments("/Account/ChangePassword", StringComparison.OrdinalIgnoreCase))
+ // Mark the principal so the application can detect that the user must change password on next navigation.
+ // Do not sign out or reject the principal here; allow the sign-in to complete and redirect the user to the change password page from the login handler.
+ if (ctx.Principal.Identity is ClaimsIdentity ci && ci.FindFirst("MustChangePassword") == null)
  {
- ctx.HttpContext.Response.Redirect("/Login?mustChangePassword=1");
+ ci.AddClaim(new Claim("MustChangePassword", "1"));
+ // ensure cookie will be renewed with the new claim
+ ctx.ShouldRenew = true;
  }
-
- ctx.RejectPrincipal();
- return;
+ logger.LogInformation("Password expired for user {userId}; marking principal with MustChangePassword.", user.Id);
+ // allow principal to remain valid
  }
  }
 

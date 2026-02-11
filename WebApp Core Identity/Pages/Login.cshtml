@@ -27,10 +27,6 @@
  <input asp-for="LModel.Password" class="form-control" type="password" autocomplete="current-password" />
  <span asp-validation-for="LModel.Password" class="text-danger"></span>
  </div>
- <div class="mb-3 form-check">
- <input asp-for="LModel.RememberMe" class="form-check-input" />
- <label asp-for="LModel.RememberMe" class="form-check-label"></label>
- </div>
  <input type="hidden" id="g-recaptcha-response" name="gRecaptchaToken" />
 
  <button type="submit" class="btn btn-primary">Login</button>

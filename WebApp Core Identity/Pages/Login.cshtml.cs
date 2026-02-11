@@ -82,6 +82,15 @@ namespace WebApp_Core_Identity.Pages
 
                 if (result.Succeeded)
                 {
+                    // If password age exceeded, redirect to ChangePassword page so user can update password.
+                    var maxAgeMinutes = configuration.GetValue<int>("PasswordPolicy:MaxAgeMinutes",1);
+                    var expired = !user.PasswordChangedUtc.HasValue || DateTime.UtcNow - user.PasswordChangedUtc.Value > TimeSpan.FromMinutes(maxAgeMinutes);
+                    if (expired)
+                    {
+                        // Successful sign-in, but require change password. Redirect to ChangePassword page.
+                        return RedirectToPage("/Account/ChangePassword", new { mustChangePassword =1 });
+                    }
+
                     // signed in, create session tracker etc (optional: use CreateUserPrincipalAsync and sign in if you need custom claims)
                     return RedirectToPage("Index");
                 }
